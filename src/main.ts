@@ -176,36 +176,35 @@ export default class SimplyScrollPlugin extends Plugin {
                         const sameFile = this.view?.file?.path === path;
 
                         if (typeof saved === 'number' && saved > 0 && !hasTarget && !sameFile) {
-                            const leaf = this;
                             const modState: EphemeralState = Object.assign({}, eState || {}); 
                             modState.scroll = saved;
                             delete modState.line;
                             delete modState.cursor;
                             modState.focus = false;
 
-                            const contentEl = leaf.view?.contentEl;
+                            const contentEl = this.view?.contentEl;
                             let isCloaked = false;
 
                             // 1. 统一挂载隐身斗篷 (使用 Class 替代直接赋值 Style)
                             if (contentEl) {
                                 contentEl.classList.remove('simply-scroll-showing');
                                 contentEl.classList.add('simply-scroll-hiding');
-                                leaf.view.containerEl.classList.add('simply-scroll-cloaked');
+                                this.view.containerEl.classList.add('simply-scroll-cloaked');
                                 isCloaked = true;
                             }
 
                             const restoreUI = () => {
                                 if (!isCloaked) return;
                                 isCloaked = false;
-                                if (leaf.view?.contentEl) {
-                                    leaf.view.containerEl.classList.remove('simply-scroll-cloaked');
-                                    leaf.view.contentEl.classList.remove('simply-scroll-hiding');
-                                    leaf.view.contentEl.classList.add('simply-scroll-showing');
+                                if (this.view?.contentEl) {
+                                    this.view.containerEl.classList.remove('simply-scroll-cloaked');
+                                    this.view.contentEl.classList.remove('simply-scroll-hiding');
+                                    this.view.contentEl.classList.add('simply-scroll-showing');
                                     
                                     // 修复 setTimeout 的 window 前缀警告
                                     window.setTimeout(() => {
-                                        if (leaf.view?.contentEl) {
-                                            leaf.view.contentEl.classList.remove('simply-scroll-showing');
+                                        if (this.view?.contentEl) {
+                                            this.view.contentEl.classList.remove('simply-scroll-showing');
                                         }
                                     }, 100);
                                 }
@@ -220,7 +219,7 @@ export default class SimplyScrollPlugin extends Plugin {
                                     const startTime = Date.now();
                                     
                                     // 修复弹出窗口(popout window)兼容性警告，使用 ownerDocument 替代全局 document
-                                    const leafDoc = leaf.view.containerEl.ownerDocument;
+                                    const leafDoc = this.view.containerEl.ownerDocument;
 
                                     if (!plugin.isAppReady) {
                                         // 分支 A：冷启动（重启）逻辑
@@ -231,20 +230,20 @@ export default class SimplyScrollPlugin extends Plugin {
                                             const elapsed = Date.now() - startTime;
                                             
                                             const activeEl = leafDoc.activeElement as HTMLElement | null;
-                                            if (activeEl && leaf.view.containerEl.contains(activeEl)) {
+                                            if (activeEl && this.view.containerEl.contains(activeEl)) {
                                                 activeEl.blur();
                                             }
                                             
-                                            if (leaf.view.currentMode && leaf.view.currentMode.applyScroll) {
-                                                leaf.view.currentMode.applyScroll(saved);
+                                            if (this.view.currentMode && this.view.currentMode.applyScroll) {
+                                                this.view.currentMode.applyScroll(saved);
                                             }
 
                                             if (elapsed < fightDuration) {
                                                 // 修复 requestAnimationFrame 的 window 前缀警告
                                                 animationFrameId = window.requestAnimationFrame(fightLoop);
                                             } else {
-                                                if (leaf.view.currentMode && leaf.view.currentMode.applyScroll) {
-                                                    leaf.view.currentMode.applyScroll(saved);
+                                                if (this.view.currentMode && this.view.currentMode.applyScroll) {
+                                                    this.view.currentMode.applyScroll(saved);
                                                 }
                                                 window.cancelAnimationFrame(animationFrameId);
                                                 restoreUI();
@@ -258,12 +257,12 @@ export default class SimplyScrollPlugin extends Plugin {
                                         // 修复 setInterval 的 window 前缀警告
                                         const fightInterval = window.setInterval(() => {
                                             const activeEl = leafDoc.activeElement as HTMLElement | null;
-                                            if (activeEl && leaf.view.containerEl.contains(activeEl)) {
+                                            if (activeEl && this.view.containerEl.contains(activeEl)) {
                                                 activeEl.blur();
                                             }
                                             
-                                            if (leaf.view.currentMode && leaf.view.currentMode.applyScroll) {
-                                                leaf.view.currentMode.applyScroll(saved);
+                                            if (this.view.currentMode && this.view.currentMode.applyScroll) {
+                                                this.view.currentMode.applyScroll(saved);
                                             }
                                             
                                             if (Date.now() - startTime >= fightDuration) { 
@@ -291,7 +290,7 @@ export default class SimplyScrollPlugin extends Plugin {
                             }
                         }
                     }
-                    return next.call(this, state, eState);
+                    return next.call(this, state, eState) as Promise<unknown>;
                 };
             }
         });
@@ -300,7 +299,7 @@ export default class SimplyScrollPlugin extends Plugin {
     }
 
     async loadAndCleanData(): Promise<void> {
-        const loadedData = (await this.loadData()) || {};
+        const loadedData = ((await this.loadData()) as SimplyScrollData | null) || {};
         this.data = Object.assign({}, loadedData);
 
         this.app.workspace.onLayoutReady(() => {
@@ -318,7 +317,6 @@ export default class SimplyScrollPlugin extends Plugin {
             
             if (isDirty) {
                 void this.saveData(this.data);
-                console.log('Simply Scroll: Cleaned up orphaned scroll data.');
             }
         });
     }
@@ -332,6 +330,5 @@ export default class SimplyScrollPlugin extends Plugin {
         
         // 生命周期内结束不需 await
         void this.saveData(this.data);
-        console.log('Simply Scroll Unloaded');
     }
 }
