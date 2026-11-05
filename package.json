@@ -1,0 +1,16 @@
+{
+  "name": "simply-scroll-next",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Only records the scroll position of files, not the cursor position. No flickering, no jumping.",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --external:obsidian --external:electron --external:@codemirror/state --external:@codemirror/view --outfile=main.js --format=cjs --platform=node",
+    "check": "npm run build && node --check main.js"
+  },
+  "devDependencies": {
+    "@codemirror/state": "6.5.0",
+    "@codemirror/view": "6.38.6",
+    "esbuild": "0.28.0",
+    "obsidian": "1.12.3"
+  }
+}
