@@ -1,7 +1,7 @@
 {
   "id": "simply-scroll-next",
   "name": "simply-scroll-next",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "minAppVersion": "0.15.0",
   "description": "Only records the scroll position of files, not the cursor position. No flickering, no jumping.",
   "author": "QuincyLeo",

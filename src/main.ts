@@ -21,9 +21,20 @@ interface ExtendedView extends View {
     };
 }
 
+interface HistoryState {
+    eState?: EphemeralState;
+}
+
 interface ExtendedWorkspaceLeaf extends WorkspaceLeaf {
     view: ExtendedView;
+    history: { pushState: (state: HistoryState) => void };
+    getHistoryState: () => HistoryState;
 }
+
+// Footnote refs and backrefs in Reading view
+const FOOTNOTE_LINK_SELECTOR = 'a.footnote-link';
+// Time to wait for Obsidian to finish scrolling to the footnote
+const FOOTNOTE_SCROLL_DELAY = 300;
 
 interface SimplyScrollData {
     [path: string]: number;
@@ -135,6 +146,9 @@ export default class SimplyScrollPlugin extends Plugin {
             }
         }, true);
 
+        // Obsidian scrolls to a footnote without recording history, so Back stays disabled
+        this.registerDomEvent(document, 'click', (e: MouseEvent) => this.handleFootnoteClick(e), true);
+
         // --- 第三部分：生命周期与数据管理 ---
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', () => {
@@ -160,6 +174,27 @@ export default class SimplyScrollPlugin extends Plugin {
                 }
             })
         );
+    }
+
+    private handleFootnoteClick(evt: MouseEvent): void {
+        const target = evt.target as Element;
+        if (evt.button !== 0 || !target.closest?.(FOOTNOTE_LINK_SELECTOR)) return;
+
+        const leaves = this.app.workspace.getLeavesOfType('markdown') as ExtendedWorkspaceLeaf[];
+        const leaf = leaves.find(l => l.view.containerEl.contains(target));
+        if (!leaf) return;
+
+        // Capture the position before Obsidian scrolls away
+        const scroll = leaf.view.currentMode?.getScroll?.();
+        const before = leaf.getHistoryState();
+        before.eState = { ...before.eState, scroll };
+
+        // Record history only if the click actually moved the view
+        window.setTimeout(() => {
+            if (leaf.view.currentMode?.getScroll?.() !== scroll) {
+                leaf.history.pushState(before);
+            }
+        }, FOOTNOTE_SCROLL_DELAY);
     }
 
     private setupMonkeyPatch(plugin: SimplyScrollPlugin) {
